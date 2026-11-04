@@ -92,7 +92,7 @@ class cls_movie {
         void start_timelapse();
         void start_extpipe();
         int extpipe_put();
-        void on_movie_start();
+        void on_movie_start(bool isextpipe=false);
         void on_movie_end();
 
         AVFormatContext     *oc;

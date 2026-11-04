@@ -1356,9 +1356,14 @@ void cls_movie::put_pix_yuv420(ctx_image_data *img_data)
     picture->data[2] = picture->data[1] + ((ctx_codec->width * ctx_codec->height) / 4);
 }
 
-void cls_movie::on_movie_start()
+void cls_movie::on_movie_start(bool isextpipe)
 {
-    MOTION_LOG(NTC, NO_ERRNO, _("Creating movie: %s"),full_nm.c_str());
+    if (isextpipe == false){
+        MOTION_LOG(NTC, NO_ERRNO, _("Creating movie: %s"),full_nm.c_str());
+    } else {
+        MOTION_LOG(NTC, NO_ERRNO, _("extpipe filename prefix: %s")
+            ,full_nm.c_str());
+    }
     if (cam->cfg->on_movie_start != "") {
         util_exec_command(cam, cam->cfg->on_movie_start.c_str(), full_nm.c_str());
     }
@@ -1886,7 +1891,7 @@ void cls_movie::start_extpipe()
 
     setbuf(extpipe_stream, nullptr);
 
-    on_movie_start();
+    on_movie_start(true);
     cam->app->dbse->exec(cam, full_nm, "movie_start");
     is_running = true;
 
