@@ -2763,7 +2763,7 @@ void cls_config::params_load_cleandir()
     prm->params_array.push_back(
         {"freq","",PARM_SRC_SYS
         , PARM_TYP_LIST, PARM_LVL_01, PARM_CHG_CODE
-        ,{"hourly","daily","weekly"},""});
+        ,{"never","hourly","daily","weekly"},""});
     prm->params_array.push_back(
         {"runtime","",PARM_SRC_SYS
         , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
@@ -2784,6 +2784,10 @@ void cls_config::params_load_cleandir()
         {"script","",PARM_SRC_SYS
         , PARM_TYP_STRING, PARM_LVL_03, PARM_CHG_CODE
         ,{""},"script to execute"});
+    prm->params_array.push_back(
+        {"size_limit","",PARM_SRC_SYS
+        , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},"total file size limit per device (expressed in MB)"});
 
     prm->params_cnt = (int)prm->params_array.size();
 

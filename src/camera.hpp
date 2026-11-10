@@ -119,6 +119,7 @@ struct ctx_schedule_data {
 
 struct ctx_cleandir {
     struct timespec next_ts;
+    bool file_added;               // One or more files have been added since the last scheduled run
     std::string freq;
     std::string action;
     std::string script;
@@ -126,6 +127,7 @@ struct ctx_cleandir {
     bool removedir;
     std::string dur_unit;
     int dur_val;
+    int size_limit;                 // Per camera storage limit in MB
 };
 
 class cls_camera {

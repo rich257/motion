@@ -29,6 +29,7 @@ class cls_schedule {
         pthread_t       handler_thread;
         void            handler();
         void            handler_shutdown();
+        void            file_added(cls_camera *p_cam);
 
         bool    restart;
         bool    finish;
@@ -41,10 +42,12 @@ class cls_schedule {
         void handler_startup();
         void timing();
         void cleandir_cam(cls_camera *p_cam);
-        void cleandir_run(cls_camera *p_cam);
+        void cleandir_dur_run(cls_camera *p_cam);
+        void cleandir_size_run(cls_camera *p_cam);
         void cleandir_remove(std::string sql, bool removedir);
         void cleandir_remove_dir(std::string dirnm);
-        void cleandir_sql(int device_id, std::string &sql, struct timespec ts);
+        void cleandir_dur_sql(int device_id, std::string &sql, struct timespec ts);
+        void cleandir_size_sql(int device_id, std::string &sql, int size_limit);
         void schedule_cam(cls_camera *p_cam);
 
 };

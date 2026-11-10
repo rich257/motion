@@ -17,6 +17,8 @@
  *
 */
 
+#include <format>
+
 #include "motion.hpp"
 #include "util.hpp"
 #include "i18n.hpp"
@@ -145,7 +147,7 @@ void cls_schedule::cleandir_remove(std::string sql, bool removedir)
     }
 }
 
-void cls_schedule::cleandir_sql(int device_id, std::string &sql, struct timespec ts)
+void cls_schedule::cleandir_dur_sql(int device_id, std::string &sql, struct timespec ts)
 {
     struct tm c_tm;
     std::string tmp_dtl, tmp_tml;
@@ -172,7 +174,7 @@ void cls_schedule::cleandir_sql(int device_id, std::string &sql, struct timespec
 
 }
 
-void cls_schedule::cleandir_run(cls_camera *p_cam)
+void cls_schedule::cleandir_dur_run(cls_camera *p_cam)
 {
     struct timespec test_ts;
     int64_t cdur;
@@ -205,9 +207,41 @@ void cls_schedule::cleandir_run(cls_camera *p_cam)
     test_ts = p_cam->cleandir->next_ts;
     test_ts.tv_sec -= cdur;
 
-    cleandir_sql(p_cam->cfg->device_id, sql, test_ts);
+    cleandir_dur_sql(p_cam->cfg->device_id, sql, test_ts);
     cleandir_remove(sql, p_cam->cleandir->removedir);
 
+}
+
+void cls_schedule::cleandir_size_sql(int device_id, std::string &sql, int size_limit)
+{
+    // Use float because the sum of the file sizes will exceed the size of a
+    // signed 32 bit int.
+    const float size_limit_bytes = (float)size_limit * 1024.0f * 1024.0f;
+
+    // List the files by age with the total size of all files older than the current file.
+    // Files that have an accumulated size greater than the limit are selected for deletion.
+    sql  = " select * from ";
+    // Use total() returning float not sum() returning int due to size exceeding 32 bit int.
+    sql += "(select *, total(file_sz) over(order by file_dtl desc, file_tml desc) as sizesum ";
+    sql += "from motion ";
+    sql += "where device_id = " + std::to_string(device_id);
+    sql += ") ";
+    sql += "where sizesum > " + std::format("{}", size_limit_bytes);
+
+}
+
+void cls_schedule::cleandir_size_run(cls_camera *p_cam){
+
+    std::string sql;
+
+    MOTION_LOG(DBG, NO_ERRNO
+        , _("Checking file size limits for camera %d"), p_cam->cfg->device_id);
+    p_cam->cleandir->file_added = false;
+
+    cleandir_size_sql(p_cam->cfg->device_id, sql, p_cam->cleandir->size_limit);
+            /*MOTION_LOG(DBG, NO_ERRNO
+                , _("Query %s"),sql.c_str());*/
+    cleandir_remove(sql, p_cam->cleandir->removedir);
 }
 
 void cls_schedule::cleandir_cam(cls_camera *p_cam)
@@ -227,9 +261,9 @@ void cls_schedule::cleandir_cam(cls_camera *p_cam)
 
     clock_gettime(CLOCK_REALTIME, &curr_ts);
 
-    if (curr_ts.tv_sec >= p_cam->cleandir->next_ts.tv_sec) {
+    if (p_cam->cleandir->freq != "never" && curr_ts.tv_sec >= p_cam->cleandir->next_ts.tv_sec) {
         if (p_cam->cleandir->action == "delete") {
-            cleandir_run(p_cam);
+            cleandir_dur_run(p_cam);
         } else {
             util_exec_command(p_cam, p_cam->cleandir->script, "");
             /* The dbse_clean function will eliminate any entries for deleted files*/
@@ -257,6 +291,24 @@ void cls_schedule::cleandir_cam(cls_camera *p_cam)
                 ,c_tm.tm_hour,c_tm.tm_min);
         }
     }
+
+    if ((p_cam->cleandir->file_added == true) && (p_cam->cleandir->size_limit > 0)) {
+        if (p_cam->cleandir->action == "delete") {
+            cleandir_size_run(p_cam);
+        } else {
+            util_exec_command(p_cam, p_cam->cleandir->script, "");
+            /* The dbse_clean function will eliminate any entries for deleted files*/
+        }
+    }
+}
+
+void cls_schedule::file_added(cls_camera *p_cam){
+
+    if (p_cam->cleandir == nullptr) {
+        return;
+    }
+
+    p_cam->cleandir->file_added = true;
 }
 
 void cls_schedule::timing()

@@ -25,6 +25,7 @@
 #include "netcam.hpp"
 #include "dbse.hpp"
 #include "alg_sec.hpp"
+#include "schedule.hpp"
 #include "movie.hpp"
 
 int movie_interrupt(void *ctx)
@@ -1367,6 +1368,7 @@ void cls_movie::on_movie_start()
 void cls_movie::on_movie_end()
 {
     MOTION_LOG(DBG, NO_ERRNO, _("Finished movie: %s"),full_nm.c_str());
+    cam->app->schedule->file_added(cam);
     if (cam->cfg->on_movie_end != "") {
         util_exec_command(cam, cam->cfg->on_movie_end.c_str(), full_nm.c_str());
     }

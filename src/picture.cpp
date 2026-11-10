@@ -25,6 +25,7 @@
 #include "jpegutils.hpp"
 #include "draw.hpp"
 #include "dbse.hpp"
+#include "schedule.hpp"
 #include "picture.hpp"
 
 
@@ -53,6 +54,7 @@ void cls_picture::on_picture_save_command(char *fname)
 {
     MOTION_LOG(NTC, NO_ERRNO, _("File saved to: %s"), fname);
 
+    cam->app->schedule->file_added(cam);
     if (cam->cfg->on_picture_save != "") {
         util_exec_command(cam, cam->cfg->on_picture_save.c_str(), fname);
     }
