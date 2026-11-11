@@ -60,7 +60,7 @@
             std::string     device_name;
             int             device_id;
             int             device_tmo;
-            std::string     pause;
+            std::string     pause_user;
             std::string     schedule_params;
             std::string     cleandir_params;
             std::string     config_dir;

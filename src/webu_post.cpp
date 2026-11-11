@@ -300,12 +300,12 @@ void cls_webu_post::action_pause_on()
         for (indx=0; indx<webu->cam_cnt; indx++) {
              if ((webu->portnbr == app->cfg->webcontrol_port) ||
                 (webu->portnbr == webu->cam_list[indx]->cfg->webcontrol_port)) {
-                webu->cam_list[indx]->user_pause = "on";
+                webu->cam_list[indx]->pause_user = "on";
             }
         }
     } else if ((webu->portnbr == app->cfg->webcontrol_port) ||
         (webu->portnbr == webua->cam->cfg->webcontrol_port)) {
-        webua->cam->user_pause = "on";
+        webua->cam->pause_user = "on";
     }
 }
 
@@ -328,12 +328,12 @@ void cls_webu_post::action_pause_off()
         for (indx=0; indx<webu->cam_cnt; indx++) {
             if ((webu->portnbr == app->cfg->webcontrol_port) ||
                 (webu->portnbr == webu->cam_list[indx]->cfg->webcontrol_port)) {
-                webu->cam_list[indx]->user_pause = "off";
+                webu->cam_list[indx]->pause_user = "off";
             }
         }
     } else if ((webu->portnbr == app->cfg->webcontrol_port) ||
         (webu->portnbr == webua->cam->cfg->webcontrol_port)) {
-        webua->cam->user_pause = "off";
+        webua->cam->pause_user = "off";
     }
 }
 
@@ -356,12 +356,12 @@ void cls_webu_post::action_pause_schedule()
         for (indx=0; indx<webu->cam_cnt; indx++) {
             if ((webu->portnbr == app->cfg->webcontrol_port) ||
                 (webu->portnbr == webu->cam_list[indx]->cfg->webcontrol_port)) {
-                webu->cam_list[indx]->user_pause = "schedule";
+                webu->cam_list[indx]->pause_user = "schedule";
             }
         }
     } else if ((webu->portnbr == app->cfg->webcontrol_port) ||
         (webu->portnbr == webua->cam->cfg->webcontrol_port)) {
-        webua->cam->user_pause = "schedule";
+        webua->cam->pause_user = "schedule";
     }
 }
 

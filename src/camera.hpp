@@ -179,8 +179,8 @@ class cls_camera {
         bool    passflag;
         int     pipe;
         int     mpipe;
-        bool    pause;
-        std::string user_pause;
+        bool    pause_detection;
+        std::string pause_user;
         int     missing_frame_counter;
         int     stream_quality;
         bool    stream_grey;

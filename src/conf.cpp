@@ -487,7 +487,7 @@ void cls_config::edit_device_tmo(std::string &parm, enum PARM_ACT pact)
 void cls_config::edit_pause(std::string &parm, enum PARM_ACT pact)
 {
     if (pact == PARM_ACT_DFLT) {
-        pause = "schedule";
+        pause_user = "schedule";
     } else if (pact == PARM_ACT_SET) {
         if ((parm == "schedule") ||
             (parm == "1")   || (parm == "yes") ||
@@ -495,23 +495,23 @@ void cls_config::edit_pause(std::string &parm, enum PARM_ACT pact)
             (parm == "0")   || (parm == "no") ||
             (parm == "off") || (parm == "false")) {
             if ((parm == "schedule") || (parm == "on") || (parm == "off")) {
-                pause = parm;
+                pause_user = parm;
             } else if ((parm == "1") || (parm == "yes") || (parm == "true")) {
                 MOTION_LOG(WRN, NO_ERRNO
                     , _("Old type specified for pause %s. Use 'on' instead")
                     ,parm.c_str());
-                pause = "on";
+                pause_user = "on";
             } else if ((parm == "0") || (parm == "no") || (parm == "false")) {
                 MOTION_LOG(WRN, NO_ERRNO
                     , _("Old type specified for pause %s.  Use 'off' instead")
                     ,parm.c_str());
-                pause = "off";
+                pause_user = "off";
             }
         } else {
             MOTION_LOG(NTC, NO_ERRNO, _("Invalid pause %s"),parm.c_str());
         }
     } else if (pact == PARM_ACT_GET) {
-        parm = pause;
+        parm = pause_user;
     } else if (pact == PARM_ACT_LIST) {
         parm = "[";
         parm = parm + "\"schedule\",\"on\",\"off\"";
@@ -4348,7 +4348,7 @@ void cls_config::cmdline()
             edit_set("log_file", optarg);
             break;
         case 'm':
-            app->user_pause = "on";
+            app->pause_user = "on";
             break;
         case 'h':
         case '?':

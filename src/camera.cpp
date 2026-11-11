@@ -645,13 +645,13 @@ void cls_camera::init_values()
         movie_passthrough = false;
     }
 
-    if (app->user_pause == "on") {
-        user_pause = "on";
+    if (app->pause_user == "on") {
+        pause_user = "on";
     } else {
-        user_pause = cfg->pause;
+        pause_user = cfg->pause_user;
     }
-    if (user_pause == "on") {
-        pause = true;
+    if (pause_user == "on") {
+        pause_detection = true;
     }
 
     v4l2cam = nullptr;
@@ -1276,7 +1276,7 @@ void cls_camera::init()
     if (device_status == STATUS_OPENED) {
         MOTION_LOG(NTC, NO_ERRNO
             ,_("Camera %d started: motion detection %s"),
-            cfg->device_id, pause ? _("disabled"):_("enabled"));
+            cfg->device_id, pause_detection ? _("disabled"):_("enabled"));
 
         if (cfg->emulate_motion) {
             MOTION_LOG(INF, NO_ERRNO, _("Emulating motion"));
@@ -1483,7 +1483,7 @@ void cls_camera::detection()
         return;
     }
 
-    if (pause == false) {
+    if (pause_detection == false) {
         alg->diff();
     } else {
         current_image->diffs = 0;
@@ -1498,22 +1498,22 @@ void cls_camera::tuning()
         return;
     }
 
-    if ((cfg->noise_tune && shots_mt == 0) && (pause == false) &&
+    if ((cfg->noise_tune && shots_mt == 0) && (pause_detection == false) &&
           (!detecting_motion && (current_image->diffs <= threshold))) {
         alg->noise_tune();
     }
 
-    if (cfg->threshold_tune && (pause == false)) {
+    if (cfg->threshold_tune && (pause_detection == false)) {
         alg->threshold_tune();
     }
 
-    if ((pause == false) &&
+    if ((pause_detection == false) &&
         (current_image->diffs > threshold) &&
         (current_image->diffs < threshold_maximum)) {
         alg->location();
     }
 
-    if (pause == false) {
+    if (pause_detection == false) {
         alg->tune_smartmask();
         alg->ref_frame_update();
     }
@@ -1557,7 +1557,7 @@ void cls_camera::overlay()
     }
 
     if (cfg->text_changes) {
-        if (pause == false) {
+        if (pause_detection == false) {
             sprintf(tmp, "%d", current_image->diffs);
         } else {
             sprintf(tmp, "-");
@@ -1892,11 +1892,11 @@ void cls_camera::check_schedule()
         return;
     }
 
-    if (user_pause == "on") {
-        pause = true;
+    if (pause_user == "on") {
+        pause_detection = true;
         return;
-    } else if (user_pause == "off") {
-        pause = false;
+    } else if (pause_user == "off") {
+        pause_detection = false;
         return;
     }
 
@@ -1907,7 +1907,7 @@ void cls_camera::check_schedule()
 
     localtime_r(&current_image->imgts.tv_sec, &c_tm);
     cur_dy = c_tm.tm_wday;
-    prev = pause;
+    prev = pause_detection;
 
     for (indx=0; indx<schedule[cur_dy].size(); indx++) {
         if ((schedule[cur_dy][indx].action == "pause") &&
@@ -1916,16 +1916,16 @@ void cls_camera::check_schedule()
             (c_tm.tm_hour <= schedule[cur_dy][indx].en_hr) &&
             (c_tm.tm_min  <= schedule[cur_dy][indx].en_min) ) {
             if (schedule[cur_dy][indx].detect) {
-                pause = false;
+                pause_detection = false;
             } else {
-                pause = true;
+                pause_detection = true;
             }
         }
     }
-    if (prev != pause) {
+    if (prev != pause_detection) {
         MOTION_LOG(NTC, NO_ERRNO
             , _("Scheduled action. Motion detection %s")
-            , pause ? _("disabled"):_("enabled"));
+            , pause_detection ? _("disabled"):_("enabled"));
     }
 
     /*
@@ -1936,7 +1936,7 @@ void cls_camera::check_schedule()
     ,schedule[cur_dy][indx].en_hr
     ,schedule[cur_dy][indx].en_min
     ,schedule[cur_dy][indx].detect
-    ,pause);
+    ,pause_detection);
     */
 }
 
@@ -2313,8 +2313,8 @@ cls_camera::cls_camera(cls_motapp *p_app)
     movie_fps = -1;
     pipe = -1;
     mpipe = -1;
-    pause = false;
-    user_pause = "schedule";
+    pause_detection = false;
+    pause_user = "schedule";
     missing_frame_counter = -1;
     schedule.clear();
     cleandir = nullptr;
