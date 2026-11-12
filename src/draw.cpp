@@ -1073,8 +1073,7 @@ struct draw_char draw_table[]= {
     }
 };
 
-int cls_draw::textn(u_char *image
-        , int startx,  int starty,  int width
+void cls_draw::text_legacy_ln(u_char *image, int stx,  int sty
         , const char *text, int len, int factor)
 {
 
@@ -1082,22 +1081,22 @@ int cls_draw::textn(u_char *image
     int pos, line_offset, next_char_offs;
     u_char *image_ptr, *char_ptr;
 
-    if (startx > width / 2) {
-        startx -= len * (6 * factor);
+    if (stx > cam->imgs.width / 2) {
+        stx -= len * (6 * factor);
     }
 
-    if (startx + len * 6 * factor >= width) {
-        len = (width-startx-1)/(6*factor);
+    if (stx + len * 6 * factor >= cam->imgs.width) {
+        len = (cam->imgs.width-stx-1)/(6*factor);
     }
 
-    if ((startx < 1) || (starty < 1) || (len < 1)) {
-        return 0;
+    if ((stx < 1) || (sty < 1) || (len < 1)) {
+        return;
     }
 
-    line_offset = width - (7 * factor);
-    next_char_offs = (width * 8 * factor) - (6 * factor);
+    line_offset = cam->imgs.width - (7 * factor);
+    next_char_offs = (cam->imgs.width * 8 * factor) - (6 * factor);
 
-    image_ptr = image + startx + (starty * width);
+    image_ptr = image + stx + (sty * cam->imgs.width);
 
     for (pos = 0; pos < len; pos++) {
         int pos_check = (int)text[pos];
@@ -1135,12 +1134,10 @@ int cls_draw::textn(u_char *image
         image_ptr -= next_char_offs;
     }
 
-    return 0;
 }
 
-int cls_draw::text(u_char *image
-        , int width, int height, int startx, int starty
-        , const char *text, int factor)
+void cls_draw::text_legacy(u_char *image, int stx, int sty
+    , const char *text, int factor)
 {
     int num_nl = 0;
     const char *end, *begin;
@@ -1164,15 +1161,15 @@ int cls_draw::text(u_char *image
     /* Adjust the factor if it is out of bounds
      * txtlen at this point is the approx length of longest line
     */
-    if ((txtlen * 7 * factor) > width) {
-        factor = (width / (txtlen * 7));
+    if ((txtlen * 7 * factor) > cam->imgs.width) {
+        factor = (cam->imgs.width / (txtlen * 7));
         if (factor <= 0) {
             factor = 1;
         }
     }
 
-    if (((num_nl+1) * 8 * factor) > height) {
-        factor = (height / ((num_nl+1) * 8));
+    if (((num_nl+1) * 8 * factor) > cam->imgs.height) {
+        factor = (cam->imgs.height / ((num_nl+1) * 8));
         if (factor <= 0) {
             factor = 1;
         }
@@ -1180,22 +1177,21 @@ int cls_draw::text(u_char *image
 
     line_space = factor * 9;
 
-    starty -= line_space * num_nl;
+    sty -= line_space * num_nl;
 
     begin = end = text;
 
     while ((end = strstr(end, NEWLINE))) {
         int len = (int)(end-begin);
 
-        textn(image, startx, starty, width, begin, len, factor);
+        text_legacy_ln(image, stx, sty, begin, len, factor);
         end += sizeof(NEWLINE)-1;
         begin = end;
-        starty += line_space;
+        sty += line_space;
     }
 
-    textn(image, startx, starty, width, begin, (int)strlen(begin), factor);
+    text_legacy_ln(image, stx, sty, begin, (int)strlen(begin), factor);
 
-    return 0;
 }
 
 void cls_draw::init_chars(void)
@@ -1217,33 +1213,254 @@ void cls_draw::init_chars(void)
 
 }
 
-void cls_draw::init_scale()
+void cls_draw::init_params()
 {
-    cam->text_scale = cam->cfg->text_scale;
-    if (cam->text_scale <= 0) {
-        cam->text_scale = 1;
-    }
+    int indx;
+    ctx_params_item *itm;
 
-    if ((cam->text_scale * 10 * 2) > (cam->imgs.width / 4)) {
-        cam->text_scale = (cam->imgs.width / (4 * 10 * 2));
-        if (cam->text_scale <= 0) {
-            cam->text_scale = 1;
+    uselegacy = false;
+    scalefactor = 1;
+    ft_usersz = false;
+    ft_size = 10;
+    ft_font ="";
+    showdiffs = false;
+    ft_color = "white";
+    ft_flags = "";
+
+    avfilter_graph_free(&fltgr);
+    av_frame_free(&frm_in);
+
+    for (indx=0;indx<params->params_array.size();indx++) {
+        itm = &params->params_array[indx];
+        if (itm->param_name == "method") {
+            if (itm->param_value == "legacy") {
+                uselegacy = true;
+            } else {
+                uselegacy = false;
+            }
         }
-        MOTION_LOG(WRN, NO_ERRNO
-            ,_("Invalid text scale.  Adjusted to %d"), cam->text_scale);
-    }
-
-    if ((cam->text_scale * 10 * 2) > (cam->imgs.height / 4)) {
-        cam->text_scale = (cam->imgs.height / (4 * 10 * 2));
-        if (cam->text_scale <= 0) {
-            cam->text_scale = 1;
+        if (itm->param_name == "scale") {
+            scalefactor = mtoi(itm->param_value);
         }
-        MOTION_LOG(WRN, NO_ERRNO
-            ,_("Invalid text scale.  Adjusted to %d"), cam->text_scale);
+        if (itm->param_name == "changes") {
+            showdiffs = mtob(itm->param_value);
+        }
+        if (itm->param_name == "ft_font") {
+            ft_font = itm->param_value;
+        }
+        if (itm->param_name == "ft_size") {
+            ft_size = mtoi(itm->param_value);
+            if (itm->param_source == PARM_SRC_USER) {
+                ft_usersz = true;
+            }
+        }
+        if (itm->param_name == "ft_color") {
+            ft_color = itm->param_value;
+        }
+        if (itm->param_name == "ft_flags") {
+            ft_flags = itm->param_value;
+        }
     }
 
-    /* If we had to modify the scale, change conf so we don't get another message */
-    cam->cfg->text_scale = cam->text_scale;
+    if (uselegacy == true) {
+        if ((scalefactor < 1) || (scalefactor >10)) {
+            scalefactor = 1;
+            MOTION_LOG(WRN, NO_ERRNO
+                ,_("Invalid text scale.  Adjusted to %d"), scalefactor);
+        }
+        if ((scalefactor * 10 * 2) > (cam->imgs.width / 4)) {
+            scalefactor = (cam->imgs.width / (4 * 10 * 2));
+            if (scalefactor <= 0) {
+                scalefactor = 1;
+            }
+            MOTION_LOG(WRN, NO_ERRNO
+                ,_("Invalid text scale.  Adjusted to %d"), scalefactor);
+        }
+
+        if ((scalefactor * 10 * 2) > (cam->imgs.height / 4)) {
+            scalefactor = (cam->imgs.height / (4 * 10 * 2));
+            if (scalefactor <= 0) {
+                scalefactor = 1;
+            }
+            MOTION_LOG(WRN, NO_ERRNO
+                ,_("Invalid text scale.  Adjusted to %d"), scalefactor);
+        }
+    } else {
+        scalefactor = 1;
+        if ((ft_size < 5) || (ft_size >100)) {
+            MOTION_LOG(WRN, NO_ERRNO
+                ,_("Invalid font size %d.  Adjusted to 10"), ft_size);
+            ft_size = 10;
+        }
+        init_ft();
+    }
+}
+
+void cls_draw::init_ft()
+{
+    size_t pos;
+    int retcd;
+    std::string atxt, dtxt_tl, dtxt_tr, dtxt_bl, dtxt_br;
+
+    ft_textl = cam->cfg->text_left;
+    pos= ft_textl.find(R"(\n)");
+    while (pos != std::string::npos) {
+        ft_textl.replace(pos, 2, "\n");
+        pos = ft_textl.find(R"(\n)",pos+1);
+    }
+
+    ft_textr = cam->cfg->text_right;
+    pos= ft_textr.find(R"(\n)");
+    while (pos != std::string::npos) {
+        ft_textr.replace(pos, 2, "\n");
+        pos = ft_textr.find(R"(\n)",pos+1);
+    }
+
+    atxt = "video_size=";
+    atxt += std::to_string(cam->imgs.width)+"x";
+    atxt += std::to_string(cam->imgs.height);
+    atxt += ":pix_fmt=0:time_base=1/1:pixel_aspect=1/1";
+
+    dtxt_tl = "text='%{metadata:mytext_tl}'";
+    dtxt_tl +=":fontfile='" +ft_font +"'";
+    dtxt_tl +=":fontsize="+std::to_string(ft_size);
+    dtxt_tl +=":fontcolor="+ft_color;
+    dtxt_tl +=":x=10";
+    dtxt_tl +=":y=10";
+
+    dtxt_tr = "text='%{metadata:mytext_tr}'";
+    dtxt_tr +=":fontfile='" +ft_font +"'";
+    dtxt_tr +=":fontsize="+std::to_string(ft_size);
+    dtxt_tr +=":fontcolor="+ft_color;
+    dtxt_tr +=":x=(w-text_w-10)";
+    dtxt_tr +=":y=10";
+
+    dtxt_bl = "text='%{metadata:mytext_bl}'";
+    dtxt_bl +=":fontfile='" +ft_font +"'";
+    dtxt_bl +=":fontsize="+std::to_string(ft_size);
+    dtxt_bl +=":fontcolor="+ft_color;
+    dtxt_bl +=":x=10";
+    dtxt_bl +=":y=(h-text_h-10)";
+
+    dtxt_br = "text='%{metadata:mytext_br}'";
+    dtxt_br +=":fontfile='" +ft_font +"'";
+    dtxt_br +=":fontsize="+std::to_string(ft_size);
+    dtxt_br +=":fontcolor="+ft_color;
+    dtxt_br +=":x=(w-text_w-10)";
+    dtxt_br +=":y=(h-text_h-10)";
+
+    fltgr = avfilter_graph_alloc();
+    if (fltgr == NULL) {
+        MOTION_LOG(ERR, NO_ERRNO,_("filter graph null"));
+        uselegacy = true;
+        return;
+    }
+
+    fltsrc  = avfilter_get_by_name("buffer");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_src, fltsrc, "in", atxt.c_str(), nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter buffer failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    fltdraw_tl = avfilter_get_by_name("drawtext");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_draw_tl, fltdraw_tl, "textflt_tl"
+        ,dtxt_tl.c_str(), nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter fltdraw failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    fltdraw_tr = avfilter_get_by_name("drawtext");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_draw_tr, fltdraw_tr, "textflt_tr"
+        ,dtxt_tr.c_str(), nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter fltdraw failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    fltdraw_bl = avfilter_get_by_name("drawtext");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_draw_bl, fltdraw_bl, "textflt_bl"
+        ,dtxt_bl.c_str(), nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter fltdraw failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    fltdraw_br = avfilter_get_by_name("drawtext");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_draw_br, fltdraw_br, "textflt_br"
+        ,dtxt_br.c_str(), nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter fltdraw failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    fltsink = avfilter_get_by_name("buffersink");
+    retcd = avfilter_graph_create_filter(
+        &fltctx_sink, fltsink, "out"
+        ,nullptr, nullptr, fltgr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter fltsink failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    retcd = avfilter_link(fltctx_src, 0, fltctx_draw_tl, 0);
+    if (retcd >= 0) {retcd = avfilter_link(fltctx_draw_tl, 0, fltctx_draw_tr, 0);}
+    if (retcd >= 0) {retcd = avfilter_link(fltctx_draw_tr, 0, fltctx_draw_bl, 0);}
+    if (retcd >= 0) {retcd = avfilter_link(fltctx_draw_bl, 0, fltctx_draw_br, 0);}
+    if (retcd >= 0) {retcd = avfilter_link(fltctx_draw_br, 0, fltctx_sink, 0);}
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("create filter link fltsrc->draw->fltsink failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    retcd = avfilter_graph_config(fltgr, nullptr);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("graph config failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    frm_in = av_frame_alloc();
+    if (frm_in == NULL) {
+        MOTION_LOG(ERR, NO_ERRNO,_("frm_in failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        return;
+    }
+
+    frm_in->format = AV_PIX_FMT_YUV420P;
+    frm_in->width  = cam->imgs.width;
+    frm_in->height = cam->imgs.height;
+
+    retcd = av_frame_get_buffer(frm_in, 32);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("frm_in buffer failed"));
+        uselegacy = true;
+        avfilter_graph_free(&fltgr);
+        av_frame_free(&frm_in);
+        return;
+    }
 
 }
 
@@ -1562,16 +1779,208 @@ void cls_draw::largest_label()
     }
 }
 
+void cls_draw::text_ft_base(u_char *image_norm
+    , std::string txtl, std::string txtr, std::string txbl, std::string txbr)
+{
+    int retcd;
+    std::string tmp;
+
+    mystrftime(cam, tmp,txtl,"");
+    av_dict_set(&frm_in->metadata, "mytext_tl", tmp.c_str(), 0);
+    mystrftime(cam, tmp,txtr,"");
+    av_dict_set(&frm_in->metadata, "mytext_tr", tmp.c_str(), 0);
+    mystrftime(cam, tmp,txbl,"");
+    av_dict_set(&frm_in->metadata, "mytext_bl", tmp.c_str(), 0);
+    mystrftime(cam, tmp,txbr,"");
+    av_dict_set(&frm_in->metadata, "mytext_br", tmp.c_str(), 0);
+
+    retcd = av_image_fill_arrays(frm_in->data, frm_in->linesize
+        , image_norm, AV_PIX_FMT_YUV420P
+        , cam->imgs.width, cam->imgs.height, 1);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("frm_in fill failed"));
+        uselegacy = true;
+        return;
+    }
+
+    retcd = av_buffersrc_add_frame_flags(
+        fltctx_src, frm_in, AV_BUFFERSRC_FLAG_KEEP_REF);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("frm_in fltsrc failed"));
+        uselegacy = true;
+        return;
+    }
+
+    frm_out = av_frame_alloc();
+    retcd = av_buffersink_get_frame(fltctx_sink, frm_out);
+    if (retcd < 0) {
+        MOTION_LOG(ERR, NO_ERRNO,_("Buffersink get frame error %d"),retcd);
+    } else {
+        retcd = av_image_copy_to_buffer(
+            (uint8_t *)image_norm
+            , ((cam->imgs.width*cam->imgs.height*3)/2)
+            , (const uint8_t * const*)frm_out
+            , frm_out->linesize
+            , (enum AVPixelFormat)frm_out->format
+            , frm_out->width, frm_out->height, 1);
+        if (retcd < 0) {
+            MOTION_LOG(ERR, NO_ERRNO,_("Copy to buffer error %d"),retcd);
+        }
+    }
+    av_frame_free(&frm_out);
+
+}
+
+void cls_draw::text()
+{
+    std::string tmp;
+
+    if (showdiffs == true) {
+        if (cam->pause_detection == false) {
+            tmp = std::to_string(cam->current_image->diffs);
+        } else {
+            tmp = "-";
+        }
+    } else {
+        tmp="";
+    }
+
+    if (uselegacy == true) {
+        if (showdiffs == true) {
+            text_legacy(cam->current_image->image_norm
+                , cam->imgs.width - 10, 10
+                , tmp.c_str(), scalefactor);
+        }
+        if (cam->cfg->text_left != "") {
+            mystrftime(cam, tmp, cam->cfg->text_left, "");
+            text_legacy(cam->current_image->image_norm
+                , 10, cam->imgs.height - (10 * scalefactor)
+                , tmp.c_str(), scalefactor);
+        }
+        if (cam->cfg->text_right != "") {
+            mystrftime(cam, tmp, cam->cfg->text_right, "");
+            text_legacy(cam->current_image->image_norm
+                ,cam->imgs.width - 10
+                ,cam->imgs.height - (10 * scalefactor)
+                ,tmp.c_str(), scalefactor);
+        }
+    } else {
+        if ((cam->cfg->text_left != "") ||
+            (cam->cfg->text_right != "") ||
+            (showdiffs == true)) {
+            text_ft_base(cam->current_image->image_norm
+                ,tmp,"",ft_textl,ft_textr);
+        }
+    }
+}
+
+void cls_draw::text_motion()
+{
+    std::string tmp;
+
+    tmp = std::format("D:{:09}\nL:{:03} N:{:03}"
+        ,cam->current_image->diffs
+        ,cam->current_image->total_labels
+        ,cam->noise);
+
+    if (uselegacy == true) {
+        text_legacy(cam->imgs.image_motion.image_norm
+            ,cam->imgs.width - 10
+            ,cam->imgs.height - (30 * scalefactor)
+            ,tmp.c_str(), scalefactor);
+
+        tmp = std::format("Device %d SETUP",cam->cfg->device_id);
+        text_legacy(cam->imgs.image_motion.image_norm
+            ,cam->imgs.width - 10
+            ,cam->imgs.height - (10 * scalefactor)
+            ,tmp.c_str(), scalefactor);
+    } else {
+        text_ft_base(cam->imgs.image_motion.image_norm,tmp,"","","");
+    }
+}
+
+void cls_draw::text_debug()
+{
+    std::string tmp, tnote;
+
+    if (cam->current_image->trigger) {
+        tnote = "Trigger";
+    } else if (cam->current_image->motion) {
+        tnote = "Motion";
+    } else if (cam->current_image->precap) {
+        tnote = "Precap";
+    } else if (cam->current_image->postcap) {
+        tnote = "Postcap";
+    } else {
+        tnote = "Other";
+    }
+    tmp = std::format("D:{:09}\nL:{:03} N:{:03}"
+        ,cam->current_image->diffs
+        ,cam->current_image->total_labels
+        ,cam->noise);
+
+    if (uselegacy == true) {
+        text_legacy(cam->current_image->image_norm
+            , 10, 20, tmp.c_str(), scalefactor);
+        text_legacy(cam->current_image->image_norm
+            , 10, 30, tnote.c_str(),scalefactor);
+        mystrftime(cam, tmp, "%Y-%m-%d\n%T-%q","");
+        text_legacy(cam->current_image->image_norm
+            , 10, 40, tmp.c_str(),scalefactor);
+    } else {
+        text_ft_base(cam->current_image->image_norm,tmp,tnote,"","%Y-%m-%d\n%T-%q");
+    }
+
+}
+
+void cls_draw::text_lost()
+{
+    std::string tmp, tnote;
+
+    if (uselegacy == true) {
+        if (cam->device_status == STATUS_OPENED) {
+            tnote = "CONNECTION TO CAMERA LOST\\nSINCE %Y-%m-%d %T";
+        } else {
+            tnote = "UNABLE TO OPEN VIDEO DEVICE\\nSINCE %Y-%m-%d %T";
+        }
+        mystrftime(cam, tmp, tnote, "");
+        text_legacy(cam->current_image->image_norm
+            , 10, 20 * scalefactor
+            , tmp.c_str(), scalefactor);
+    } else {
+        if (cam->device_status == STATUS_OPENED) {
+            tnote = "CONNECTION TO CAMERA LOST\nSINCE %Y-%m-%d %T";
+        } else {
+            tnote = "UNABLE TO OPEN VIDEO DEVICE\nSINCE %Y-%m-%d %T";
+        }
+        text_ft_base(cam->current_image->image_norm,tnote,"","","");
+    }
+}
+
 cls_draw::cls_draw(cls_camera *p_cam)
 {
     cam = p_cam;
-    init_chars();
-    init_scale();
+    params = cam->cfg->params[cam->cfg->pmap[PARM_PCAT_TEXT]];
 
+    fltctx_src = nullptr;
+    fltctx_draw_tl = nullptr;
+    fltctx_draw_tr = nullptr;
+    fltctx_draw_bl = nullptr;
+    fltctx_draw_br = nullptr;
+    fltctx_sink = nullptr;
+    fltgr = nullptr;
+    frm_in = nullptr;
+    frm_out = nullptr;
+
+    init_chars();
+    init_params();
 }
 
 cls_draw::~cls_draw()
 {
+    avfilter_graph_free(&fltgr);
+    av_frame_free(&frm_in);
+    av_frame_free(&frm_out);
 
 }
 

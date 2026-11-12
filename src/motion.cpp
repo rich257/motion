@@ -561,7 +561,7 @@ void cls_motapp::init(int p_argc, char *p_argv[])
     argv = p_argv;
 
     reload_all = false;
-    user_pause = false;
+    pause_user = false;
     cam_add = false;
     cam_delete = -1;
     cam_cnt = 0;

@@ -227,8 +227,7 @@
             <tr>
               <td bgcolor="#edf4f9" ><a href="#text_left" >text_left</a> </td>
               <td bgcolor="#edf4f9" ><a href="#text_right" >text_right</a> </td>
-              <td bgcolor="#edf4f9" ><a href="#text_changes" >text_changes</a> </td>
-              <td bgcolor="#edf4f9" ><a href="#text_scale" >text_scale</a> </td>
+              <td bgcolor="#edf4f9" ><a href="#text_params" >text_params</a> </td>
             </tr>
           </tbody>
         </table>
@@ -1656,18 +1655,67 @@
         </ul>
         <p></p>
 
-        <h3><a name="text_changes"></a> text_changes </h3>
+        <h3><a name="text_params"></a>text_params</h3>
         <ul>
-          <li> Values: on, off | Default: off</li>
-          Show the number of pixels that changed in the upper right corner.
+          <li> Values: String | Default: Not Defined</li>
+          Comma separated list of configuration parameters.  Format is: option=value,option2=value2
         </ul>
-        <p></p>
+        <ul>
+          <div>
+            <i><h4> params_file </h4></i>
+            <ul>
+              <li> Values: String | Default: Not Defined </li>
+              Full path and file name for a file containing the params listed one per line.
+            </ul>
+          </div>
+          <div>
+            <i><h4>method</h4></i>
+            The method to display characters on the image.  Options are either
+            <code>legacy</code> or <code>freetype</code>  The default is <code>freetype</code>
+          </div>
+          <p></p>
 
-        <h3><a name="text_scale"></a> text_scale </h3>
-        <ul>
-          <li> Values: 1 - 10 | Default: 1</li>
-          Scale factor for text drawn on images.
-        </ul>
+          <div>
+            <i><h4>scale</h4></i>
+            The scale factor to apply to the fonts when using the legacy method.
+            This option is ignored when using the freetype method.
+          </div>
+          <p></p>
+          <div>
+            <i><h4>changes</h4></i>
+            Boolean to indicate whether to display the number of pixel
+            changes in the upper left corner of image.
+          </div>
+          <p></p>
+          <div>
+            <i><h4>ft_font</h4></i>
+            The name of the font file to use.  If the name of font includes
+            spaces, users must enclose the name in quotes when specifying
+            it in the configuration file.  Note that if the font name specified
+            is not valid, no message will be logged and the default font
+            for the system will be used.
+          </div>
+          <p></p>
+          <div>
+            <i><h4>ft_size</h4></i>
+            The size of the font to use.  Valid values are 5 to 100 with the
+            default of 10.
+          </div>
+          <p></p>
+          <p></p>
+          <div>
+            <i><h4>ft_color</h4></i>
+            The color for the font.  The default is white
+          </div>
+          <p></p>
+          <p></p>
+          <div>
+            <i><h4>ft_flags</h4></i>
+            The flags to send to the FreeType font encoder.
+          </div>
+          <p></p>
+
+         </ul>
         <p></p>
 
         <h3><a name="text_event"></a> text_event </h3>

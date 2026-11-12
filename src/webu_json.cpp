@@ -623,13 +623,13 @@ void cls_webu_json::status_vars(int indx_cam)
         webua->resp_page += ",\"detecting\":false";
     }
 
-    if (cam->pause) {
+    if (cam->pause_detection) {
         webua->resp_page += ",\"pause\":true";
     } else {
         webua->resp_page += ",\"pause\":false";
     }
 
-    webua->resp_page += ",\"user_pause\":\"" + cam->user_pause +"\"";
+    webua->resp_page += ",\"user_pause\":\"" + cam->pause_user +"\"";
 
     webua->resp_page += "}";
 }

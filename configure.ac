@@ -241,7 +241,7 @@ AS_IF([test "${FFMPEG}" = "no"], [
     export PKG_CONFIG_PATH
     AC_MSG_RESULT($PKG_CONFIG_PATH)
 
-    FFMPEG_DEPS="libavutil libavformat libavcodec libswscale libavdevice"
+    FFMPEG_DEPS="libavutil libavformat libavcodec libswscale libavdevice libavfilter"
     AC_MSG_CHECKING(for FFmpeg)
     AS_IF([pkgconf $FFMPEG_DEPS], [
         FFMPEG_VER="("`pkgconf --modversion libavformat`")"

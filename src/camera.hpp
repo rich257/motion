@@ -168,7 +168,6 @@ class cls_camera {
         int     lastrate;
         int     frame_skip;
         bool    lost_connection;
-        int     text_scale;
         int     watchdog;
         bool    movie_passthrough;
         char    eventid[20];
@@ -179,8 +178,8 @@ class cls_camera {
         bool    passflag;
         int     pipe;
         int     mpipe;
-        bool    pause;
-        std::string user_pause;
+        bool    pause_detection;
+        std::string pause_user;
         int     missing_frame_counter;
         int     stream_quality;
         bool    stream_grey;
@@ -226,7 +225,6 @@ class cls_camera {
 
         void ring_resize();
         void ring_destroy();
-        void ring_process_debug();
         void ring_process_image();
         void ring_process();
         void info_reset();

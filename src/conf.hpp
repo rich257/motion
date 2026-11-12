@@ -60,7 +60,7 @@
             std::string     device_name;
             int             device_id;
             int             device_tmo;
-            std::string     pause;
+            std::string     pause_user;
             std::string     schedule_params;
             std::string     cleandir_params;
             std::string     config_dir;
@@ -91,9 +91,8 @@
             std::string     locate_motion_style;
             std::string     text_left;
             std::string     text_right;
-            bool            text_changes;
-            int             text_scale;
             std::string     text_event;
+            std::string     text_params;
 
             /* Motion detection configuration parameters */
             bool            emulate_motion;
@@ -275,6 +274,7 @@
             void params_load_timelapse();
             void params_load_mpegts();
             void params_load_stream();
+            void params_load_text();
 
             void config_dir_item(std::string confdir);
 
@@ -287,12 +287,13 @@
 
             int edit_set_active(std::string parm_nm, std::string parm_val);
             int edit_set_depr(std::string &parm_nm, std::string &parm_val);
-            void edit_depr_tdbl(std::string newname, std::string &parm_val);
             void edit_depr_vid(std::string parm_nm, std::string parm_val);
             void edit_depr_web(std::string newname, std::string &parm_val);
             void edit_depr_movie(std::string parm_nm, std::string parm_val);
             void edit_depr_timelapse(std::string parm_nm, std::string parm_val);
             void edit_depr_stream(std::string parm_nm, std::string parm_val);
+            void edit_depr_text(std::string parm_nm, std::string parm_val);
+
             void edit_config_dir(std::string &parm, enum PARM_ACT pact);
             void edit_get_bool(std::string &parm_dest, bool &parm_in);
             void edit_set_bool(bool &parm_dest, std::string &parm_in);
@@ -326,7 +327,6 @@
             void edit_log_file(std::string &parm, enum PARM_ACT pact);
             void edit_log_level(std::string &parm, enum PARM_ACT pact);
             void edit_log_fflevel(std::string &parm, enum PARM_ACT pact);
-            void edit_log_type(std::string &parm, enum PARM_ACT pact);
             void edit_native_language(std::string &parm, enum PARM_ACT pact);
             void edit_native_language_code(std::string &parm, enum PARM_ACT pact);
 
@@ -358,11 +358,10 @@
 
             void edit_locate_motion_mode(std::string &parm, enum PARM_ACT pact);
             void edit_locate_motion_style(std::string &parm, enum PARM_ACT pact);
-            void edit_text_changes(std::string &parm, enum PARM_ACT pact);
             void edit_text_event(std::string &parm, enum PARM_ACT pact);
             void edit_text_left(std::string &parm, enum PARM_ACT pact);
             void edit_text_right(std::string &parm, enum PARM_ACT pact);
-            void edit_text_scale(std::string &parm, enum PARM_ACT pact);
+            void edit_text_params(std::string &parm, enum PARM_ACT pact);
 
             void edit_emulate_motion(std::string &parm, enum PARM_ACT pact);
             void edit_threshold(std::string &parm, enum PARM_ACT pact);
