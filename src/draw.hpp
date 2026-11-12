@@ -21,8 +21,6 @@
     #define ASCII_MAX 127
     #define NEWLINE "\\n"
 
-    #include "hersheyfont.hpp"
-
     class cls_draw {
         public:
             cls_draw(cls_camera *p_cam);
@@ -41,16 +39,9 @@
 
             u_char *char_arr_ptr[ASCII_MAX];
 
-            hersheyfont::cls_font font;
-
             int textn(u_char *image
                 , int startx,  int starty,  int width
                 , const char *text, int len, int factor);
-            int text_hf(u_char *image
-                , int startx,  int starty,  int width
-                , const char *text, int len, int factor, int font_weight);
-            int scale_glyphs(std::vector<hersheyfont::glyph>& glyphs, int factor);
-
             void init_chars(void);
             void location(ctx_coord *cent
                 , ctx_images *imgs, int width, u_char *new_var);
