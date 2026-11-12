@@ -25,6 +25,7 @@
 #include "netcam.hpp"
 #include "dbse.hpp"
 #include "alg_sec.hpp"
+#include "schedule.hpp"
 #include "movie.hpp"
 
 int movie_interrupt(void *ctx)
@@ -1359,7 +1360,7 @@ void cls_movie::put_pix_yuv420(ctx_image_data *img_data)
 void cls_movie::on_movie_start(bool isextpipe)
 {
     if (isextpipe == false){
-        MOTION_LOG(NTC, NO_ERRNO, _("Creating movie: %s"),full_nm.c_str());
+    MOTION_LOG(NTC, NO_ERRNO, _("Creating movie: %s"),full_nm.c_str());
     } else {
         MOTION_LOG(NTC, NO_ERRNO, _("extpipe filename prefix: %s")
             ,full_nm.c_str());
@@ -1372,6 +1373,7 @@ void cls_movie::on_movie_start(bool isextpipe)
 void cls_movie::on_movie_end()
 {
     MOTION_LOG(DBG, NO_ERRNO, _("Finished movie: %s"),full_nm.c_str());
+    cam->app->schedule->file_added(cam);
     if (cam->cfg->on_movie_end != "") {
         util_exec_command(cam, cam->cfg->on_movie_end.c_str(), full_nm.c_str());
     }

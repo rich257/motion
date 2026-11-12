@@ -788,6 +788,7 @@ void cls_camera::init_cleandir_default()
     }
 
     if ((cleandir->freq != "hourly") &&
+        (cleandir->freq != "never") &&
         (cleandir->freq != "daily") &&
         (cleandir->freq != "weekly")) {
         MOTION_LOG(ERR, NO_ERRNO
@@ -999,6 +1000,7 @@ void cls_camera::init_cleandir()
     cleandir->removedir = false;
     cleandir->dur_unit = "w";
     cleandir->dur_val = 2;
+    cleandir->size_limit = 0;
 
     for (indx=0; indx<prm_c->params_cnt; indx++) {
         pnm = prm_c->params_array[indx].param_name;
@@ -1023,6 +1025,9 @@ void cls_camera::init_cleandir()
         }
         if (pnm == "removedir") {
             cleandir->removedir = mtob(pvl);
+        }
+        if (pnm == "size_limit") {
+            cleandir->size_limit = mtoi(pvl);
         }
     }
     init_cleandir_default();
