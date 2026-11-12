@@ -100,33 +100,6 @@ void cls_camera::ring_destroy()
     imgs.ring_size = 0;
 }
 
-/* Add debug messsage to image */
-void cls_camera::ring_process_debug()
-{
-    char tmp[32];
-    const char *t;
-
-    if (current_image->trigger) {
-        t = "Trigger";
-    } else if (current_image->motion) {
-        t = "Motion";
-    } else if (current_image->precap) {
-        t = "Precap";
-    } else if (current_image->postcap) {
-        t = "Postcap";
-    } else {
-        t = "Other";
-    }
-
-    mystrftime(this, tmp, sizeof(tmp), "%H%M%S-%q", NULL);
-    draw->text(imgs.image_ring[imgs.ring_out].image_norm
-            , imgs.width, imgs.height
-            , 10, 20, tmp, text_scale);
-    draw->text(imgs.image_ring[imgs.ring_out].image_norm
-            , imgs.width, imgs.height
-            , 10, 30, t, text_scale);
-}
-
 void cls_camera::ring_process_image()
 {
     if (current_image->save_pic) {
@@ -161,9 +134,6 @@ void cls_camera::ring_process()
         current_image = &imgs.image_ring[imgs.ring_out];
 
         if (current_image->shot <= cfg->framerate) {
-            if (app->cfg->log_level >= DBG) {
-                ring_process_debug();
-            }
             ring_process_image();
         }
 
@@ -633,7 +603,6 @@ void cls_camera::init_values()
     lasttime = frame_curr_ts.tv_sec;
     postcap = 0;
     event_stop = false;
-    text_scale = cfg->text_scale;
     connectionlosttime.tv_sec = 0;
     connectionlosttime.tv_nsec = 0;
     info_reset();
@@ -1390,16 +1359,13 @@ void cls_camera::resetimages()
 
 int cls_camera::capture()
 {
-    const char *tmpin;
-    char tmpout[80];
     int retcd;
-
-    retcd = cam_next(current_image);
 
     if ((restart == true) || (handler_stop == true)) {
         return 0;
     }
 
+    retcd = cam_next(current_image);
     if (retcd == CAPTURE_SUCCESS) {
         watchdog = cfg->watchdog_tmo;
         lost_connection = false;
@@ -1432,19 +1398,10 @@ int cls_camera::capture()
                 , (uint)imgs.size_norm);
         } else {
             lost_connection = true;
-            if (device_status == STATUS_OPENED) {
-                tmpin = "CONNECTION TO CAMERA LOST\\nSINCE %Y-%m-%d %T";
-            } else {
-                tmpin = "UNABLE TO OPEN VIDEO DEVICE\\nSINCE %Y-%m-%d %T";
-            }
 
             memset(current_image->image_norm, 0x80, (uint)imgs.size_norm);
             current_image->imgts =connectionlosttime;
-            mystrftime(this, tmpout, sizeof(tmpout), tmpin, NULL);
-            draw->text(current_image->image_norm
-                    , imgs.width, imgs.height
-                    , 10, 20 * text_scale
-                    , tmpout, text_scale);
+            draw->text_lost();
 
             /* Write error message only once */
             if (missing_frame_counter == (cfg->device_tmo * cfg->framerate)) {
@@ -1523,14 +1480,11 @@ void cls_camera::tuning()
     previous_location_y = current_image->location.y;
 }
 
-/* apply image overlays */
 void cls_camera::overlay()
 {
     if ((restart == true) || (handler_stop == true)) {
         return;
     }
-
-    char tmp[PATH_MAX];
 
     if ((cfg->smart_mask_speed >0) &&
         ((cfg->picture_output_motion != "off") ||
@@ -1556,51 +1510,14 @@ void cls_camera::overlay()
         draw->fixed_mask();
     }
 
-    if (cfg->text_changes) {
-        if (pause_detection == false) {
-            sprintf(tmp, "%d", current_image->diffs);
-        } else {
-            sprintf(tmp, "-");
-        }
-        draw->text(current_image->image_norm
-                , imgs.width, imgs.height
-                , imgs.width - 10, 10
-                , tmp, text_scale);
-    }
-
     if ((stream.motion.jpg_cnct > 0) ||
         (stream.motion.ts_cnct > 0)) {
-        sprintf(tmp, "D:%5d L:%3d N:%3d", current_image->diffs,
-            current_image->total_labels, noise);
-        draw->text(imgs.image_motion.image_norm
-                , imgs.width, imgs.height
-                , imgs.width - 10
-                , imgs.height - (30 * text_scale)
-                , tmp, text_scale);
-        sprintf(tmp, "THREAD %d SETUP", threadnr);
-        draw->text(imgs.image_motion.image_norm
-                , imgs.width, imgs.height
-                , imgs.width - 10
-                , imgs.height - (10 * text_scale)
-                , tmp, text_scale);
+        draw->text_motion();
     }
-
-    /* Add text in lower left corner of the pictures */
-    if (cfg->text_left != "") {
-        mystrftime(this, tmp, sizeof(tmp), cfg->text_left.c_str(), NULL);
-        draw->text(current_image->image_norm
-                , imgs.width, imgs.height
-                , 10, imgs.height - (10 * text_scale)
-                , tmp, text_scale);
-    }
-
-    /* Add text in lower right corner of the pictures */
-    if (cfg->text_right != "") {
-        mystrftime(this, tmp, sizeof(tmp), cfg->text_right.c_str(), NULL);
-        draw->text(current_image->image_norm
-                , imgs.width, imgs.height
-                , imgs.width - 10, imgs.height - (10 * text_scale)
-                , tmp, text_scale);
+    if (app->cfg->log_level >= DBG) {
+        draw->text_debug();
+    } else {
+        draw->text();
     }
 }
 
@@ -2008,6 +1925,11 @@ void cls_camera::check_config_params()
             check_config_params_copy(prm);
             init_stream();
 
+        } else if ((prm->params_changed == true) &&
+            (prm->params_pcat == PARM_PCAT_TEXT)){
+            check_config_params_copy(prm);
+            draw->init_params();
+
         } else if (prm->params_changed == true) {
             MOTION_LOG(DBG, NO_ERRNO,_("Uncoded parameter change: %s")
                 ,prm->params_desc.c_str());
@@ -2101,9 +2023,6 @@ void cls_camera::check_config_main()
                 } else if (parm_nm == "noise_level") {
                     cfg->edit_set(parm_nm, parm_vl_src);
                     noise = cfg->noise_level;
-                } else if (parm_nm == "text_scale") {
-                    cfg->edit_set(parm_nm, parm_vl_src);
-                    draw->init_scale();
                 } else if (parm_nm == "movie_passthrough") {
                     cfg->edit_set(parm_nm, parm_vl_src);
                     movie_passthrough = cfg->movie_passthrough;
@@ -2131,6 +2050,14 @@ void cls_camera::check_config_main()
                     check_config_main_params(PARM_PCAT_STREAM, parm_vl_src);
                     cfg->edit_set(parm_nm, parm_vl_src);
                     init_stream();
+                } else if (parm_nm == "text_params") {
+                    check_config_main_params(PARM_PCAT_TEXT, parm_vl_src);
+                    cfg->edit_set(parm_nm, parm_vl_src);
+                    draw->init_params();
+                } else if ((parm_nm == "text_left") || (parm_nm == "text_right")) {
+                    cfg->edit_set(parm_nm, parm_vl_src);
+                    draw->init_params();
+
                 } else {
                     MOTION_LOG(ERR, NO_ERRNO
                         , _("Programming error for changes to parameter %s")
@@ -2152,7 +2079,7 @@ void cls_camera::check_config()
     if ((restart == true) || (handler_stop == true) || (conf_chg == false)) {
         return;
     }
-    MOTION_LOG(INF, NO_ERRNO, _("check config"));
+    MOTION_LOG(DBG, NO_ERRNO, _("check config"));
     pthread_mutex_lock(&app->mutex_post);
         check_config_params();
         check_config_main();
@@ -2302,7 +2229,6 @@ cls_camera::cls_camera(cls_motapp *p_app)
     lastrate = -1;
     frame_skip = -1;
     lost_connection = false;
-    text_scale = 1;
     movie_passthrough = false;
 
     memset(&eventid, 0, sizeof(eventid));

@@ -65,10 +65,9 @@ ctx_parm config_parms[] = {
 
     {"locate_motion_mode",        PARM_TYP_LIST,   PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
     {"locate_motion_style",       PARM_TYP_LIST,   PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
-    {"text_left",                 PARM_TYP_STRING, PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
-    {"text_right",                PARM_TYP_STRING, PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
-    {"text_changes",              PARM_TYP_BOOL,   PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
-    {"text_scale",                PARM_TYP_LIST,   PARM_CAT_04, PARM_LVL_01, PARM_CHG_CODE },
+    {"text_left",                 PARM_TYP_STRING, PARM_CAT_04, PARM_LVL_01, PARM_CHG_CODE },
+    {"text_right",                PARM_TYP_STRING, PARM_CAT_04, PARM_LVL_01, PARM_CHG_CODE },
+    {"text_params",               PARM_TYP_PARAMS, PARM_CAT_04, PARM_LVL_01, PARM_CHG_CODE },
     {"text_event",                PARM_TYP_STRING, PARM_CAT_04, PARM_LVL_01, PARM_CHG_COPY },
 
     {"emulate_motion",            PARM_TYP_BOOL,   PARM_CAT_05, PARM_LVL_01, PARM_CHG_COPY },
@@ -260,6 +259,10 @@ ctx_parm_depr config_parms_depr[] = {
         ,"\"stream_motion\" replaced with \"stream_params\" parameter \"motion\""}
     ,{"stream_maxrate", "5.0.0","stream_params option"
         ,"\"stream_maxrate\" replaced with \"stream_params\" parameter \"maxrate\""}
+    ,{"text_scale", "5.0.0","text_params option"
+        ,"\"text_scale\" replaced with \"text_params\" parameter \"scale\""}
+    ,{"text_changes", "5.0.0","text_params option"
+        ,"\"text_changes\" replaced with \"text_params\" parameter \"changes\""}
 
     ,{ "","","",""}
 };
@@ -872,36 +875,14 @@ void cls_config::edit_text_right(std::string &parm, enum PARM_ACT pact)
     }
 }
 
-void cls_config::edit_text_changes(std::string &parm, enum PARM_ACT pact)
+void cls_config::edit_text_params(std::string &parm, enum PARM_ACT pact)
 {
     if (pact == PARM_ACT_DFLT) {
-        text_changes = false;
+        text_params = "";
     } else if (pact == PARM_ACT_SET) {
-        edit_set_bool(text_changes, parm);
+        text_params = parm;
     } else if (pact == PARM_ACT_GET) {
-        edit_get_bool(parm, text_changes);
-    }
-}
-
-void cls_config::edit_text_scale(std::string &parm, enum PARM_ACT pact)
-{
-    int parm_in;
-    if (pact == PARM_ACT_DFLT) {
-        text_scale = 1;
-    } else if (pact == PARM_ACT_SET) {
-        parm_in = atoi(parm.c_str());
-        if ((parm_in < 1) || (parm_in > 10)) {
-            MOTION_LOG(NTC, NO_ERRNO, _("Invalid text_scale %d"),parm_in);
-        } else {
-            text_scale = parm_in;
-        }
-    } else if (pact == PARM_ACT_GET) {
-        parm = std::to_string(text_scale);
-    } else if (pact == PARM_ACT_LIST) {
-        parm = "[";
-        parm = parm + "\"1\",\"2\",\"3\",\"4\",\"5\"";
-        parm = parm + ",\"6\",\"7\",\"8\",\"9\",\"10\"";
-        parm = parm + "]";
+        parm = text_params;
     }
 }
 
@@ -2450,8 +2431,7 @@ void cls_config::edit_cat04(std::string parm_nm, std::string &parm_val, enum PAR
     } else if (parm_nm == "locate_motion_style") {     edit_locate_motion_style(parm_val, pact);
     } else if (parm_nm == "text_left") {               edit_text_left(parm_val, pact);
     } else if (parm_nm == "text_right") {              edit_text_right(parm_val, pact);
-    } else if (parm_nm == "text_changes") {            edit_text_changes(parm_val, pact);
-    } else if (parm_nm == "text_scale") {              edit_text_scale(parm_val, pact);
+    } else if (parm_nm == "text_params") {             edit_text_params(parm_val, pact);
     } else if (parm_nm == "text_event") {              edit_text_event(parm_val, pact);
     }
 
@@ -3756,6 +3736,60 @@ void cls_config::params_load_timelapse()
     pmap.insert({PARM_PCAT_TLSP,params.size()-1});
 }
 
+void cls_config::params_load_text()
+{
+    ctx_params *prm;
+
+    prm = new ctx_params;
+    prm->app = app;
+    prm->params_desc = "text_params";
+    prm->params_pcat = PARM_PCAT_TEXT;
+    prm->params_changed = false;
+
+    /*param_name,param_value,param_source*/
+    /*param_type,param_lvl,param_chg,param_lst,desc*/
+    prm->params_array.push_back(
+        {"params_file","",PARM_SRC_SYS
+        , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"method","freetype",PARM_SRC_SYS
+        , PARM_TYP_LIST, PARM_LVL_01, PARM_CHG_CODE
+        ,{"freetype","legacy"},""});
+    prm->params_array.push_back(
+        {"scale","1",PARM_SRC_SYS
+        , PARM_TYP_INT, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"changes","false",PARM_SRC_SYS
+        , PARM_TYP_BOOL, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"ft_font","",PARM_SRC_SYS
+        , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"ft_size","10",PARM_SRC_SYS
+        , PARM_TYP_INT, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"ft_color","white",PARM_SRC_SYS
+        , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+    prm->params_array.push_back(
+        {"ft_flags","",PARM_SRC_SYS
+        , PARM_TYP_STRING, PARM_LVL_01, PARM_CHG_CODE
+        ,{""},""});
+
+    prm->params_cnt = (int)prm->params_array.size();
+
+    util_parms_parse(prm,"text_params",text_params,PARM_PCAT_TEXT);
+
+    params.push_back(prm);
+    pmap.insert({PARM_PCAT_TEXT,params.size()-1});
+
+}
+
 void cls_config::params_load_dpritm(cls_config *cfgs, ctx_params *prmd, PARM_PCAT pcat)
 {
     int indx;
@@ -3808,6 +3842,7 @@ void cls_config::params_load_listitm(cls_config *cfgs, ctx_params *prma,ctx_para
     } else if (prmd->params_pcat == PARM_PCAT_MPEGTS) { ptmp=cfgs->stream_mpegts_params;
     } else if (prmd->params_pcat == PARM_PCAT_STREAM) { ptmp=cfgs->stream_params;
     } else if (prmd->params_pcat == PARM_PCAT_TLSP)   { ptmp=cfgs->timelapse_params;
+    } else if (prmd->params_pcat == PARM_PCAT_TEXT)   { ptmp=cfgs->text_params;
     } else {  return;
     }
     util_parms_parse(prmd, prmd->params_desc, ptmp, prmd->params_pcat);
@@ -3906,6 +3941,7 @@ void cls_config::params_load()
     params_load_timelapse();
     params_load_mpegts();
     params_load_stream();
+    params_load_text();
 }
 
 std::string cls_config::params_prefix(PARM_PCAT pcat) {
@@ -3928,6 +3964,7 @@ std::string cls_config::params_prefix(PARM_PCAT pcat) {
     } else if (pcat == PARM_PCAT_TLSP)  { return "ptlp_";
     } else if (pcat == PARM_PCAT_MPEGTS){ return "pmts_";
     } else if (pcat == PARM_PCAT_STREAM){ return "pstm_";
+    } else if (pcat == PARM_PCAT_TEXT)  { return "ptxt_";
     } else { return "pudf_";
     }
 }
@@ -3995,6 +4032,15 @@ void cls_config::defaults_depr()
     prm->params_cnt = 0;
     depr_params.push_back(prm);
     depr_pmap.insert({PARM_PCAT_STREAM,depr_params.size()-1});
+
+    prm = new ctx_params;
+    prm->app = app;
+    prm->params_desc = "text_params";
+    prm->params_pcat = PARM_PCAT_TEXT;
+    prm->params_cnt = 0;
+    depr_params.push_back(prm);
+    depr_pmap.insert({PARM_PCAT_TEXT,depr_params.size()-1});
+
 }
 
 int cls_config::edit_set_active(std::string parm_nm, std::string parm_val)
@@ -4041,16 +4087,34 @@ void cls_config::edit_depr_web(std::string newname, std::string &parm_val)
     edit_set_active(newname, parm_new);
 }
 
-void cls_config::edit_depr_tdbl(std::string newname, std::string &parm_val)
+void cls_config::edit_depr_text(std::string parm_nm, std::string parm_val)
 {
-    std::string parm_new;
+    std::string pnew_nm, pnew_val;
+    ctx_params *prm;
 
-    if ((parm_val == "1") || (parm_val == "yes") || (parm_val == "on")) {
-        parm_new = "2";
+    prm = depr_params[depr_pmap[PARM_PCAT_TEXT]];
+    if (parm_nm == "text_scale") {
+        pnew_nm = "scale";
+        pnew_val = parm_val;
+    } else if (parm_nm == "text_changes") {
+        pnew_nm = "scale";
+        pnew_val = parm_val;
+    } else if (parm_nm == "text_double") {
+        pnew_nm = "scale";
+        if (mtob(parm_val) == true) {
+            pnew_val = "2";
+        } else {
+            pnew_val = "1";
+        }
     } else {
-        parm_new = "1";
+        return;
     }
-    edit_set_active(newname, parm_new);
+    util_parms_add(prm, pnew_nm, pnew_val, false);
+    MOTION_LOG(INF, NO_ERRNO
+        ,_("%s %s changed to text_params option %s=%s")
+        ,parm_nm.c_str(),parm_val.c_str()
+        ,pnew_nm.c_str(),pnew_val.c_str());
+
 }
 
 void cls_config::edit_depr_movie(std::string parm_nm, std::string parm_val)
@@ -4156,8 +4220,9 @@ int cls_config::edit_set_depr(std::string &parm_nm, std::string &parm_val)
             } else if ((parm_nm == "webcontrol_html_output")) {
                 edit_depr_web(config_parms_depr[indx].newname, parm_val);
 
-            } else if ((parm_nm == "text_double")) {
-                edit_depr_tdbl(config_parms_depr[indx].newname, parm_val);
+            } else if ((parm_nm == "text_scale")||(parm_nm == "text_changes")||
+                (parm_nm == "text_double")) {
+                edit_depr_text(parm_nm, parm_val);
 
             } else if ((parm_nm == "movie_quality") || (parm_nm == "movie_bps") ||
                 (parm_nm == "movie_retain") || (parm_nm == "movie_all_frames")) {

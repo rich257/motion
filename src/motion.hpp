@@ -45,6 +45,7 @@
 #include <pthread.h>
 #include <microhttpd.h>
 #include <string>
+#include <format>
 #include <list>
 #include <vector>
 #include <unordered_map>
@@ -74,10 +75,14 @@
         #include <libavformat/avio.h>
         #include <libswscale/swscale.h>
         #include <libavutil/avutil.h>
-        #include "libavutil/buffer.h"
-        #include "libavutil/error.h"
-        #include "libavutil/hwcontext.h"
-        #include "libavutil/mem.h"
+        #include <libavutil/buffer.h>
+        #include <libavutil/error.h>
+        #include <libavutil/hwcontext.h>
+        #include <libavutil/mem.h>
+        #include <libavutil/opt.h>
+        #include <libavfilter/avfilter.h>
+        #include <libavfilter/buffersrc.h>
+        #include <libavfilter/buffersink.h>
     }
 #pragma GCC diagnostic pop
 
@@ -169,6 +174,7 @@ enum PARM_PCAT {        /* The params categories*/
     ,PARM_PCAT_TLSP     /* timelapse_params */
     ,PARM_PCAT_MPEGTS   /* stream_mpegts_params */
     ,PARM_PCAT_STREAM   /* stream_mpegts_params */
+    ,PARM_PCAT_TEXT     /* text_params */
     ,PARM_PCAT_MAX      /* Maximum params category*/
 };
 enum PARM_TYP{

@@ -958,7 +958,7 @@ static void util_parms_next(std::string &parmline, size_t indxnm_st, size_t indx
         if (indxcm == std::string::npos) {
             parmline = parmline.substr(0, indxnm_st - 1);
         } else {
-            parmline = parmline.substr(0, indxnm_st - 1) + parmline.substr(indxcm + 1);
+            parmline = parmline.substr(0, indxnm_st - 1) + parmline.substr(indxcm);
         }
     }
     mytrim(parmline);
